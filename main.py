@@ -17,7 +17,7 @@ OPENAI_API_KEY = os.getenv('OPENAI_API_KEY')
 TWILIO_ACCOUNT_SID = os.getenv('TWILIO_ACCOUNT_SID')
 TWILIO_AUTH_TOKEN = os.getenv('TWILIO_AUTH_TOKEN')
 TWILIO_PHONE_NUMBER = os.getenv('TWILIO_PHONE_NUMBER')
-Host = os.getenv('Host')
+HOST = os.getenv('HOST')
 PORT = int(os.getenv('PORT', 5050))
 
 SYSTEM_MESSAGE = (
@@ -40,7 +40,7 @@ twilio_client = Client(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
 
 @app.get("/", response_class=JSONResponse)
 async def index_page():
-    return {"message": "Twilio Outbound Media Stream Server is running!"}
+    return {"message": "Twilio Outbound Media Stream Server is running!", "host": HOST}
 
 
 @app.post("/make-call", response_class=JSONResponse)
@@ -54,19 +54,34 @@ async def make_outbound_call(request: Request):
     if not to_number:
         return JSONResponse({"error": "Missing 'to' parameter"}, status_code=400)
 
-    host = '7913-59-144-161-251.ngrok-free.app' #'32bd-59-144-161-251.ngrok-free.app'
+    host = HOST #'32bd-59-144-161-251.ngrok-free.app'
 
     try:
         call = twilio_client.calls.create(
             to=to_number,
             from_=TWILIO_PHONE_NUMBER,
-            twiml=f'<Response><Connect><Stream url="wss://{host}/media-stream"/></Connect></Response>'
+            twiml=f'<Response><Say voice="alice">Hello! This is your friendly AI assistant. How can I help you today?</Say><Pause length="1"/><Connect><Stream url="wss://{host}/media-stream"/></Connect></Response>'
         )
         print("call", call)
         return {"message": "Call initiated successfully", "call_sid": call.sid}
     except Exception as e:
         print("error", e)
         return JSONResponse({"error": str(e)}, status_code=500)
+
+@app.api_route("/inbound-twiml", methods=["GET", "POST"])
+async def handle_inbound_twiml(request: Request):
+    """
+    TwiML response for inbound calls.
+    """
+    host = HOST
+    response = VoiceResponse()
+    response.say("You are being connected to an AI voice assistant.")
+    response.pause(length=1)
+    response.say("O.K. you can start talking!")
+    connect = Connect()
+    connect.stream(url=f'wss://{host}/media-stream')
+    response.append(connect)
+    return HTMLResponse(content=str(response), media_type="application/xml")
 
 @app.websocket("/media-stream")
 async def handle_media_stream(websocket: WebSocket):
