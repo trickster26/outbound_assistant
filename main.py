@@ -54,8 +54,7 @@ async def make_outbound_call(request: Request):
     if not to_number:
         return JSONResponse({"error": "Missing 'to' parameter"}, status_code=400)
 
-    host = Host #'32bd-59-144-161-251.ngrok-free.app'
-    twiml_url = f"http://{host}/outbound-twiml"
+    host = '7913-59-144-161-251.ngrok-free.app' #'32bd-59-144-161-251.ngrok-free.app'
 
     try:
         call = twilio_client.calls.create(
@@ -68,21 +67,6 @@ async def make_outbound_call(request: Request):
     except Exception as e:
         print("error", e)
         return JSONResponse({"error": str(e)}, status_code=500)
-
-
-@app.api_route("/outbound-twiml", methods=["GET", "POST"])
-async def handle_outbound_twiml(request: Request):
-    """
-    TwiML response for outbound calls.
-    """
-    response = VoiceResponse()
-    response.say("You are being connected to an AI voice assistant powered by Twilio and OpenAI.")
-    response.pause(length=1)
-    connect = Connect()
-    connect.stream(url=f'wss://{request.url.hostname}/media-stream')
-    response.append(connect)
-    return HTMLResponse(content=str(response), media_type="application/xml")
-
 
 @app.websocket("/media-stream")
 async def handle_media_stream(websocket: WebSocket):
